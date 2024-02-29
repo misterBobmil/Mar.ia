@@ -7,4 +7,4 @@ DIR_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR_PROJECT="$(dirname "$DIR_SCRIPT")"
 
 # Executa o wrapper Gradle na pasta do projeto
-"${DIR_PROJECT}/gradlew" "$@"
+"${DIR_PROJECT}/gradle-8.6/gradlew" "$@"
