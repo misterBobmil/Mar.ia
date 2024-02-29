@@ -3,6 +3,7 @@ import requests
 import shutil
 import time
 import pickle
+import unittest
 
 # Diretório restrito para a IA
 DIRETORIO_ARQUIVOS = 'diretorio_restrito'
@@ -187,14 +188,17 @@ def main():
         else:
             print("Comando inválido.")
 
+# Classe de teste JUnit
+class MeuPrimeiroTeste(unittest.TestCase):
+
+    def testeExemplo(self):
+        self.assertEqual(2, 1 + 1, "A soma de 1 + 1 deve ser 2")
+
 # Carregar o estado da IA
 carregar_estado()
 
 # Iniciar busca de aprendizado
 buscar_aprendizado()
-
-# Executar o comando autoreconf
-os.system("autoreconf --force --install")
 
 # Inicialização do programa
 if __name__ == "__main__":
@@ -202,4 +206,4 @@ if __name__ == "__main__":
 
 # Salvar o estado da IA
 salvar_estado()
-
+    
