@@ -1,133 +1,228 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstring>
-#include <vector>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Diretório restrito para a IA
-const string DIRETORIO_ARQUIVOS = "diretorio_restrito";
+#define DIRETORIO_ARQUIVOS "diretorio_restrito"
+
+// Estrutura para armazenar dados de aprendizado
+typedef struct {
+    int variavel_exemplo;
+} Aprendizado;
 
 // Função para restringir acesso ao diretório restrito
 void restringir_acesso() {
-    try {
-        mkdir(DIRETORIO_ARQUIVOS.c_str(), 0700);  // Permissões: Somente o proprietário pode ler, escrever e acessar
-    } catch (const exception& e) {
-        cout << "Erro ao restringir o acesso ao diretório: " << e.what() << endl;
-    }
+    // Implementação da função
 }
 
 // Função para criar uma nova pasta dentro do diretório de arquivos restrito
-string criar_nova_pasta(string nome_pasta) {
-    string nova_pasta = DIRETORIO_ARQUIVOS + "/" + nome_pasta;
-    mkdir(nova_pasta.c_str(), 0700);
+char* criar_nova_pasta(char* nome_pasta) {
+    char* nova_pasta = malloc(strlen(DIRETORIO_ARQUIVOS) + strlen(nome_pasta) + 2); // +2 para / e \0
+    sprintf(nova_pasta, "%s/%s", DIRETORIO_ARQUIVOS, nome_pasta);
+    mkdir(nova_pasta, 0700);
     return nova_pasta;
 }
 
 // Função para criar um novo arquivo dentro de uma pasta específica
-void criar_novo_arquivo(string nome_arquivo, string conteudo, string pasta = "") {
-    string caminho_arquivo;
-    if (!pasta.empty()) {
-        caminho_arquivo = DIRETORIO_ARQUIVOS + "/" + pasta + "/" + nome_arquivo;
+void criar_novo_arquivo(char* nome_arquivo, char* conteudo, char* pasta) {
+    char caminho_arquivo[strlen(DIRETORIO_ARQUIVOS) + strlen(pasta) + strlen(nome_arquivo) + 3]; // +3 para / e \0
+    if (pasta != NULL) {
+        sprintf(caminho_arquivo, "%s/%s/%s", DIRETORIO_ARQUIVOS, pasta, nome_arquivo);
     } else {
-        caminho_arquivo = DIRETORIO_ARQUIVOS + "/" + nome_arquivo;
+        sprintf(caminho_arquivo, "%s/%s", DIRETORIO_ARQUIVOS, nome_arquivo);
     }
-    ofstream arquivo(caminho_arquivo);
-    if (arquivo.is_open()) {
-        arquivo << conteudo;
-        arquivo.close();
+    FILE* arquivo = fopen(caminho_arquivo, "w");
+    if (arquivo != NULL) {
+        fprintf(arquivo, "%s", conteudo);
+        fclose(arquivo);
     } else {
-        cout << "Erro ao criar o arquivo: " << caminho_arquivo << endl;
+        printf("Erro ao criar o arquivo: %s\n", caminho_arquivo);
     }
 }
 
 // Função para listar todos os arquivos e pastas dentro de uma pasta específica do diretório de arquivos restrito
-vector<string> listar_arquivos_e_pastas(string pasta = "") {
-    string caminho_pasta;
-    if (!pasta.empty()) {
-        caminho_pasta = DIRETORIO_ARQUIVOS + "/" + pasta;
+char** listar_arquivos_e_pastas(char* pasta) {
+    char caminho_pasta[strlen(DIRETORIO_ARQUIVOS) + strlen(pasta) + 2]; // +2 para / e \0
+    if (pasta != NULL) {
+        sprintf(caminho_pasta, "%s/%s", DIRETORIO_ARQUIVOS, pasta);
     } else {
-        caminho_pasta = DIRETORIO_ARQUIVOS;
+        sprintf(caminho_pasta, "%s", DIRETORIO_ARQUIVOS);
     }
-    vector<string> conteudo_pasta;
     DIR* dir;
     struct dirent* ent;
-    if ((dir = opendir(caminho_pasta.c_str())) != NULL) {
+    if ((dir = opendir(caminho_pasta)) != NULL) {
+        int contador = 0;
+        char** conteudo_pasta = malloc(100 * sizeof(char*)); // Alocando espaço para 100 ponteiros
         while ((ent = readdir(dir)) != NULL) {
-            conteudo_pasta.push_back(ent->d_name);
+            conteudo_pasta[contador] = malloc(strlen(ent->d_name) + 1); // +1 para \0
+            strcpy(conteudo_pasta[contador], ent->d_name);
+            contador++;
         }
         closedir(dir);
+        return conteudo_pasta;
     } else {
-        cout << "Erro ao listar a pasta: " << caminho_pasta << endl;
+        printf("Erro ao listar a pasta: %s\n", caminho_pasta);
+        return NULL;
     }
-    return conteudo_pasta;
 }
 
 // Função para mover um arquivo ou pasta para um novo local dentro do diretório de arquivos restrito
-void mover_arquivo_ou_pasta(string origem, string destino) {
-    string origem_path = DIRETORIO_ARQUIVOS + "/" + origem;
-    string destino_path = DIRETORIO_ARQUIVOS + "/" + destino;
-    if (rename(origem_path.c_str(), destino_path.c_str()) != 0) {
-        cout << "Erro ao mover o arquivo ou pasta." << endl;
+void mover_arquivo_ou_pasta(char* origem, char* destino) {
+    char origem_path[strlen(DIRETORIO_ARQUIVOS) + strlen(origem) + 2]; // +2 para / e \0
+    char destino_path[strlen(DIRETORIO_ARQUIVOS) + strlen(destino) + 2]; // +2 para / e \0
+    sprintf(origem_path, "%s/%s", DIRETORIO_ARQUIVOS, origem);
+    sprintf(destino_path, "%s/%s", DIRETORIO_ARQUIVOS, destino);
+    if (rename(origem_path, destino_path) != 0) {
+        printf("Erro ao mover o arquivo ou pasta.\n");
     }
 }
 
 // Função para deletar um arquivo ou pasta do diretório de arquivos restrito
-void deletar_arquivo_ou_pasta(string arquivo_ou_pasta) {
-    string caminho = DIRETORIO_ARQUIVOS + "/" + arquivo_ou_pasta;
-    if (remove(caminho.c_str()) != 0) {
-        cout << "Erro ao deletar o arquivo ou pasta." << endl;
+void deletar_arquivo_ou_pasta(char* arquivo_ou_pasta) {
+    char caminho[strlen(DIRETORIO_ARQUIVOS) + strlen(arquivo_ou_pasta) + 2]; // +2 para / e \0
+    sprintf(caminho, "%s/%s", DIRETORIO_ARQUIVOS, arquivo_ou_pasta);
+    if (remove(caminho) != 0) {
+        printf("Erro ao deletar o arquivo ou pasta.\n");
     }
 }
 
 // Função para limpar uma pasta específica do diretório de arquivos restrito (deleta todos os arquivos e pastas dentro dela)
-void limpar_pasta(string pasta) {
-    string caminho_pasta = DIRETORIO_ARQUIVOS + "/" + pasta;
-    vector<string> conteudo_pasta = listar_arquivos_e_pastas(pasta);
-    for (const string& arquivo : conteudo_pasta) {
-        string caminho_arquivo = caminho_pasta + "/" + arquivo;
-        if (remove(caminho_arquivo.c_str()) != 0) {
-            cout << "Erro ao deletar o arquivo: " << caminho_arquivo << endl;
+void limpar_pasta(char* pasta) {
+    char caminho_pasta[strlen(DIRETORIO_ARQUIVOS) + strlen(pasta) + 2]; // +2 para / e \0
+    sprintf(caminho_pasta, "%s/%s", DIRETORIO_ARQUIVOS, pasta);
+    DIR* dir;
+    struct dirent* ent;
+    if ((dir = opendir(caminho_pasta)) != NULL) {
+        while ((ent = readdir(dir)) != NULL) {
+            char caminho_arquivo[strlen(caminho_pasta) + strlen(ent->d_name) + 2]; // +2 para / e \0
+            sprintf(caminho_arquivo, "%s/%s", caminho_pasta, ent->d_name);
+            if (remove(caminho_arquivo) != 0) {
+                printf("Erro ao deletar o arquivo: %s\n", caminho_arquivo);
+            }
         }
+        closedir(dir);
+    } else {
+        printf("Erro ao listar a pasta: %s\n", caminho_pasta);
     }
+}
+
+// Função para salvar o estado da IA em um arquivo
+void salvar_estado() {
+    FILE* arquivo = fopen("estado_conversa.txt", "w");
+    if (arquivo != NULL) {
+        for (const auto& [chave, valor] : estado_conversa) {
+            fprintf(arquivo, "%s:%s\n", chave.c_str(), valor.c_str());
+        }
+        fclose(arquivo);
+    } else {
+        printf("Erro ao salvar o estado da conversa.\n");
+    }
+}
+
+// Função para carregar o estado da IA de um arquivo
+void carregar_estado() {
+    FILE* arquivo = fopen("estado_conversa.txt", "r");
+    if (arquivo != NULL) {
+        char linha[100];
+        while (fgets(linha, sizeof(linha), arquivo) != NULL) {
+            char chave[50], valor[50];
+            if (sscanf(linha, "%49[^:]:%49[^\n]", chave, valor) == 2) {
+                estado_conversa[chave] = valor;
+            }
+        }
+        fclose(arquivo);
+    } else {
+        printf("Erro ao carregar o estado da conversa.\n");
+    }
+}
+
+// Função para enviar notificação
+void enviar_notificacao(char* mensagem) {
+    // Aqui você pode implementar a lógica para enviar uma notificação para você (por email, mensagem de texto, etc.)
+    printf("Notificação enviada: %s\n", mensagem);
+}
+
+// Função para pesquisar e avaliar APIs
+void pesquisar_avaliar_api(char* palavra_chave) {
+    // Aqui você pode implementar lógica para pesquisar e avaliar APIs relevantes
+    // Retorne informações sobre as APIs encontradas
+}
+
+// Função para solicitar permissão do usuário e integrar uma nova API
+bool integrar_nova_api(char* api_info) {
+    char permissao;
+    printf("Deseja integrar a API %s? (s/n): ", api_info);
+    scanf(" %c", &permissao);
+    if (tolower(permissao) == 's') {
+        // Aqui você pode adicionar a lógica para integrar a API ao seu sistema
+        printf("API %s integrada com sucesso!\n", api_info);
+        return true;
+    } else {
+        printf("Integração da API cancelada pelo usuário.\n");
+        return false;
+    }
+}
+
+// Função para coletar feedback do usuário
+void coletar_feedback() {
+    char feedback[1000];
+    printf("Por favor, forneça seu feedback: ");
+    fgets(feedback, sizeof(feedback), stdin);
+    // Aqui você pode adicionar a lógica para processar e registrar o feedback do usuário
+    printf("Feedback registrado com sucesso!\n");
+}
+
+// Função para buscar ativamente aprendizado
+bool buscar_aprendizado() {
+    // Aqui você pode adicionar a lógica para buscar ativamente aprendizado
+    // Por exemplo, pesquisar na web, ler documentos, analisar dados, etc.
+    // Se a IA aprender algo novo, envie uma notificação
+    bool aprendeu_algo_novo = true; // Exemplo, substitua por sua lógica real
+    if (aprendeu_algo_novo) {
+        printf("A IA aprendeu algo novo!\n");
+        return true;
+    }
+    return false;
 }
 
 // Função principal
 int main() {
-    cout << "Bem-vindo ao sistema de gerenciamento de arquivos da IA!" << endl;
-    cout << "Por favor, escolha uma das opções abaixo:" << endl;
-    cout << "Opções:" << endl;
-    cout << "- criar_pasta: Criar uma nova pasta" << endl;
-    cout << "- listar: Listar arquivos e pastas" << endl;
-    cout << "- mover: Mover um arquivo ou pasta" << endl;
-    cout << "- deletar: Deletar um arquivo ou pasta" << endl;
-    cout << "- limpar: Limpar uma pasta (deletar todos os arquivos e pastas dentro dela)" << endl;
+    printf("Bem-vindo ao sistema de gerenciamento de arquivos da IA!\n");
+    printf("Por favor, escolha uma das opções abaixo:\n");
+    printf("Opções:\n");
+    printf("- criar_pasta: Criar uma nova pasta\n");
+    printf("- listar: Listar arquivos e pastas\n");
+    printf("- mover: Mover um arquivo ou pasta\n");
+    printf("- deletar: Deletar um arquivo ou pasta\n");
+    printf("- limpar: Limpar uma pasta (deletar todos os arquivos e pastas dentro dela)\n");
 
-    while (true) {
-        string comando;
-        cout << "\nDigite o comando desejado ou 'sair' para encerrar: ";
-        getline(cin, comando);
-        if (comando == "sair") {
-            cout << "Até logo!" << endl;
+    while (1) {
+        char comando[50];
+        printf("\nDigite o comando desejado ou 'sair' para encerrar: ");
+        scanf("%s", comando);
+        if (strcmp(comando, "sair") == 0) {
+            printf("Até logo!\n");
             break;
-        } else if (comando == "criar_pasta") {
-            // Chamar a função para criar pasta
-        } else if (comando == "listar") {
-            // Chamar a função para listar arquivos e pastas
-        } else if (comando == "mover") {
-            // Chamar a função para mover arquivo ou pasta
-        } else if (comando == "deletar") {
-            // Chamar a função para deletar arquivo ou pasta
-        } else if (comando == "limpar") {
-            // Chamar a função para limpar pasta
+        } else if (strcmp(comando, "criar_pasta") == 0) {
+            criar_pasta();
+        } else if (strcmp(comando, "listar") == 0) {
+            listar_arquivos_pastas();
+        } else if (strcmp(comando, "mover") == 0) {
+            mover_arquivo_pasta();
+        } else if (strcmp(comando, "deletar") == 0) {
+            deletar_arquivo_pasta();
+        } else if (strcmp(comando, "limpar") == 0) {
+            limpar_pasta();
         } else {
-            cout << "Comando inválido." << endl;
+            printf("Comando inválido.\n");
         }
     }
+
+    // Iniciar busca de aprendizado
+    buscar_aprendizado();
+
+    // Salvar o estado da IA
+    salvar_estado();
 
     return 0;
 }
