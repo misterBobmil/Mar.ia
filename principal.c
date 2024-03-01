@@ -3,14 +3,14 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 
 // Diretório restrito para a IA
 const string DIRETORIO_ARQUIVOS = "diretorio_restrito";
-
-// Estrutura para armazenar dados de aprendizado
-map<string, string> estado_conversa;
 
 // Função para restringir acesso ao diretório restrito
 void restringir_acesso() {
@@ -96,87 +96,6 @@ void limpar_pasta(string pasta) {
     }
 }
 
-// Função para salvar o estado da IA em um arquivo
-void salvar_estado() {
-    ofstream arquivo("estado_conversa.txt");
-    if (arquivo.is_open()) {
-        for (const auto& [chave, valor] : estado_conversa) {
-            arquivo << chave << ":" << valor << endl;
-        }
-        arquivo.close();
-    } else {
-        cout << "Erro ao salvar o estado da conversa." << endl;
-    }
-}
-
-// Função para carregar o estado da IA de um arquivo
-void carregar_estado() {
-    ifstream arquivo("estado_conversa.txt");
-    if (arquivo.is_open()) {
-        string linha;
-        while (getline(arquivo, linha)) {
-            istringstream iss(linha);
-            string chave, valor;
-            if (getline(iss, chave, ':') && getline(iss, valor)) {
-                estado_conversa[chave] = valor;
-            }
-        }
-        arquivo.close();
-    } else {
-        cout << "Erro ao carregar o estado da conversa." << endl;
-    }
-}
-
-// Função para enviar notificação
-void enviar_notificacao(string mensagem) {
-    // Aqui você pode implementar a lógica para enviar uma notificação para você (por email, mensagem de texto, etc.)
-    cout << "Notificação enviada: " << mensagem << endl;
-}
-
-// Função para pesquisar e avaliar APIs
-void pesquisar_avaliar_api(string palavra_chave) {
-    // Aqui você pode implementar lógica para pesquisar e avaliar APIs relevantes
-    // Retorne informações sobre as APIs encontradas
-}
-
-// Função para solicitar permissão do usuário e integrar uma nova API
-bool integrar_nova_api(string api_info) {
-    char permissao;
-    cout << "Deseja integrar a API " << api_info << "? (s/n): ";
-    cin >> permissao;
-    if (tolower(permissao) == 's') {
-        // Aqui você pode adicionar a lógica para integrar a API ao seu sistema
-        cout << "API " << api_info << " integrada com sucesso!" << endl;
-        return true;
-    } else {
-        cout << "Integração da API cancelada pelo usuário." << endl;
-        return false;
-    }
-}
-
-// Função para coletar feedback do usuário
-void coletar_feedback() {
-    string feedback;
-    cout << "Por favor, forneça seu feedback: ";
-    cin.ignore();
-    getline(cin, feedback);
-    // Aqui você pode adicionar a lógica para processar e registrar o feedback do usuário
-    cout << "Feedback registrado com sucesso!" << endl;
-}
-
-// Função para buscar ativamente aprendizado
-bool buscar_aprendizado() {
-    // Aqui você pode adicionar a lógica para buscar ativamente aprendizado
-    // Por exemplo, pesquisar na web, ler documentos, analisar dados, etc.
-    // Se a IA aprender algo novo, envie uma notificação
-    bool aprendeu_algo_novo = true; // Exemplo, substitua por sua lógica real
-    if (aprendeu_algo_novo) {
-        cout << "A IA aprendeu algo novo!" << endl;
-        return true;
-    }
-    return false;
-}
-
 // Função principal
 int main() {
     cout << "Bem-vindo ao sistema de gerenciamento de arquivos da IA!" << endl;
@@ -191,30 +110,24 @@ int main() {
     while (true) {
         string comando;
         cout << "\nDigite o comando desejado ou 'sair' para encerrar: ";
-        cin >> comando;
+        getline(cin, comando);
         if (comando == "sair") {
             cout << "Até logo!" << endl;
             break;
         } else if (comando == "criar_pasta") {
-            criar_pasta();
+            // Chamar a função para criar pasta
         } else if (comando == "listar") {
-            listar_arquivos_pastas();
+            // Chamar a função para listar arquivos e pastas
         } else if (comando == "mover") {
-            mover_arquivo_pasta();
+            // Chamar a função para mover arquivo ou pasta
         } else if (comando == "deletar") {
-            deletar_arquivo_pasta();
+            // Chamar a função para deletar arquivo ou pasta
         } else if (comando == "limpar") {
-            limpar_pasta();
+            // Chamar a função para limpar pasta
         } else {
             cout << "Comando inválido." << endl;
         }
     }
-
-    // Iniciar busca de aprendizado
-    buscar_aprendizado();
-
-    // Salvar o estado da IA
-    salvar_estado();
 
     return 0;
 }
