@@ -1,185 +1,204 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>  
-#include <sys/stat.h> 
-#include <ctype.h> 
+import os
+import requests
+import shutil
+import time
+import pickle
 
-#define DIRETORIO_ARQUIVOS "diretorio_restrito"
+# Diretório restrito para a IA
+DIRETORIO_ARQUIVOS = 'diretorio_restrito'
 
-char* criar_nova_pasta(char* nome_pasta) {
-    char* nova_pasta = malloc(strlen(DIRETORIO_ARQUIVOS) + strlen(nome_pasta) + 2); 
-    sprintf(nova_pasta, "%s/%s", DIRETORIO_ARQUIVOS, nome_pasta);
-    mkdir(nova_pasta, 0700);
-    return nova_pasta;
-}
+# Estrutura para armazenar dados de aprendizado
+estado_conversa = {}
 
-void criar_novo_arquivo(char* nome_arquivo, char* conteudo, char* pasta) {
-    char caminho_arquivo[strlen(DIRETORIO_ARQUIVOS) + strlen(pasta) + strlen(nome_arquivo) + 3]; 
-    if (pasta != NULL) {
-        sprintf(caminho_arquivo, "%s/%s/%s", DIRETORIO_ARQUIVOS, pasta, nome_arquivo);
-    } else {
-        sprintf(caminho_arquivo, "%s/%s", DIRETORIO_ARQUIVOS, nome_arquivo);
-    }
-    FILE* arquivo = fopen(caminho_arquivo, "w");
-    if (arquivo != NULL) {
-        fprintf(arquivo, "%s", conteudo);
-        fclose(arquivo);
-    } else {
-        printf("Erro ao criar o arquivo: %s\n", caminho_arquivo);
-    }
-}
+# Função para restringir acesso ao diretório restrito
+def restringir_acesso():
+    try:
+        os.mkdir(DIRETORIO_ARQUIVOS)
+    except FileExistsError:
+        pass
+    try:
+        os.chmod(DIRETORIO_ARQUIVOS, 0o700)  # Permissões: Somente o proprietário pode ler, escrever e acessar
+    except Exception as e:
+        print("Erro ao restringir o acesso ao diretório:", e)
 
-char** listar_arquivos_e_pastas(char* pasta) {
-    char caminho_pasta[strlen(DIRETORIO_ARQUIVOS) + strlen(pasta) + 2]; 
-    if (pasta != NULL) {
-        sprintf(caminho_pasta, "%s/%s", DIRETORIO_ARQUIVOS, pasta);
-    } else {
-        sprintf(caminho_pasta, "%s", DIRETORIO_ARQUIVOS);
-    }
-    DIR* dir;
-    struct dirent* ent;
-    if ((dir = opendir(caminho_pasta)) != NULL) {
-        int contador = 0;
-        char** conteudo_pasta = malloc(100 * sizeof(char*)); 
-        while ((ent = readdir(dir)) != NULL) {
-            conteudo_pasta[contador] = malloc(strlen(ent->d_name) + 1); 
-            strcpy(conteudo_pasta[contador], ent->d_name);
-            contador++;
-        }
-        closedir(dir);
-        return conteudo_pasta;
-    } else {
-        printf("Erro ao listar a pasta: %s\n", caminho_pasta);
-        return NULL;
-    }
-}
+# Função para criar uma nova pasta dentro do diretório de arquivos restrito
+def criar_nova_pasta(nome_pasta):
+    nova_pasta = os.path.join(DIRETORIO_ARQUIVOS, nome_pasta)
+    os.makedirs(nova_pasta)
+    return nova_pasta
 
-void mover_arquivo_ou_pasta(char* origem, char* destino) {
-    char origem_path[strlen(DIRETORIO_ARQUIVOS) + strlen(origem) + 2]; 
-    char destino_path[strlen(DIRETORIO_ARQUIVOS) + strlen(destino) + 2]; 
-    sprintf(origem_path, "%s/%s", DIRETORIO_ARQUIVOS, origem);
-    sprintf(destino_path, "%s/%s", DIRETORIO_ARQUIVOS, destino);
-    if (rename(origem_path, destino_path) != 0) {
-        printf("Erro ao mover o arquivo ou pasta.\n");
-    }
-}
+# Função para criar um novo arquivo dentro de uma pasta específica
+def criar_novo_arquivo(nome_arquivo, conteudo, pasta=None):
+    if pasta:
+        caminho_arquivo = os.path.join(DIRETORIO_ARQUIVOS, pasta, nome_arquivo)
+    else:
+        caminho_arquivo = os.path.join(DIRETORIO_ARQUIVOS, nome_arquivo)
+    with open(caminho_arquivo, 'w') as f:
+        f.write(conteudo)
 
-void deletar_arquivo_ou_pasta(char* arquivo_ou_pasta) {
-    char caminho[strlen(DIRETORIO_ARQUIVOS) + strlen(arquivo_ou_pasta) + 2]; 
-    sprintf(caminho, "%s/%s", DIRETORIO_ARQUIVOS, arquivo_ou_pasta);
-    if (remove(caminho) != 0) {
-        printf("Erro ao deletar o arquivo ou pasta.\n");
-    }
-}
+# Função para listar todos os arquivos e pastas dentro de uma pasta específica do diretório de arquivos restrito
+def listar_arquivos_e_pastas(pasta=None):
+    if pasta:
+        caminho_pasta = os.path.join(DIRETORIO_ARQUIVOS, pasta)
+        return os.listdir(caminho_pasta)
+    else:
+        return os.listdir(DIRETORIO_ARQUIVOS)
 
-void limpar_pasta(char* pasta) {
-    char caminho_pasta[strlen(DIRETORIO_ARQUIVOS) + strlen(pasta) + 2]; 
-    sprintf(caminho_pasta, "%s/%s", DIRETORIO_ARQUIVOS, pasta);
-    DIR* dir;
-    struct dirent* ent;
-    if ((dir = opendir(caminho_pasta)) != NULL) {
-        while ((ent = readdir(dir)) != NULL) {
-            if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
-                char caminho_arquivo[strlen(caminho_pasta) + strlen(ent->d_name) + 2]; 
-                sprintf(caminho_arquivo, "%s/%s", caminho_pasta, ent->d_name);
-                if (remove(caminho_arquivo) != 0) {
-                    printf("Erro ao deletar o arquivo: %s\n", caminho_arquivo);
-                }
-            }
-        }
-        closedir(dir);
-    } else {
-        printf("Erro ao listar a pasta: %s\n", caminho_pasta);
-    }
-}
+# Função para mover um arquivo ou pasta para um novo local dentro do diretório de arquivos restrito
+def mover_arquivo_ou_pasta(origem, destino):
+    origem_path = os.path.join(DIRETORIO_ARQUIVOS, origem)
+    destino_path = os.path.join(DIRETORIO_ARQUIVOS, destino)
+    shutil.move(origem_path, destino_path)
 
-void salvar_estado() {
-    FILE* arquivo = fopen("estado_conversa.txt", "w");
-    if (arquivo != NULL) {
-        // Implementação da função para salvar o estado da IA
-        fclose(arquivo);
-    } else {
-        printf("Erro ao salvar o estado da conversa.\n");
-    }
-}
+# Função para deletar um arquivo ou pasta do diretório de arquivos restrito
+def deletar_arquivo_ou_pasta(arquivo_ou_pasta):
+    caminho = os.path.join(DIRETORIO_ARQUIVOS, arquivo_ou_pasta)
+    if os.path.isfile(caminho):
+        os.remove(caminho)
+    else:
+        shutil.rmtree(caminho)
 
-void buscar_aprendizado() {
-    // Implementação da função para buscar aprendizado pela internet
-}
+# Função para limpar uma pasta específica do diretório de arquivos restrito (deleta todos os arquivos e pastas dentro dela)
+def limpar_pasta(pasta):
+    caminho_pasta = os.path.join(DIRETORIO_ARQUIVOS, pasta)
+    for arquivo in os.listdir(caminho_pasta):
+        caminho_arquivo = os.path.join(caminho_pasta, arquivo)
+        if os.path.isfile(caminho_arquivo):
+            os.remove(caminho_arquivo)
+        else:
+            shutil.rmtree(caminho_arquivo)
 
-void pesquisar_avaliar_api() {
-    // Implementação da função para pesquisar e avaliar APIs relevantes
-}
+# Função para salvar o estado da IA em um arquivo
+def salvar_estado():
+    try:
+        with open('estado_conversa.pkl', 'wb') as f:
+            pickle.dump(estado_conversa, f)
+    except Exception as e:
+        print("Erro ao salvar o estado da conversa:", e)
 
-void enviar_notificacao(char* mensagem) {
-    // Aqui você pode implementar a lógica para enviar uma notificação para você (por email, mensagem de texto, etc.)
-    printf("Notificação enviada: %s\n", mensagem);
-}
+# Função para carregar o estado da IA de um arquivo
+def carregar_estado():
+    global estado_conversa
+    try:
+        with open('estado_conversa.pkl', 'rb') as f:
+            estado_conversa = pickle.load(f)
+    except Exception as e:
+        print("Erro ao carregar o estado da conversa:", e)
 
-int integrar_nova_api(char* api_info) {
-    char permissao;
-    printf("Deseja integrar a API %s? (s/n): ", api_info);
-    scanf(" %c", &permissao);
-    if (tolower(permissao) == 's') {
-        // Aqui você pode adicionar a lógica para integrar a API ao seu sistema
-        printf("API %s integrada com sucesso!\n", api_info);
-        return 1; // verdadeiro
-    } else {
-        printf("Integração da API cancelada pelo usuário.\n");
-        return 0; // falso
-    }
-}
+# Função para restringir acesso ao diretório restrito
+restringir_acesso()
 
-void coletar_feedback() {
-    char feedback[1000];
-    printf("Por favor, forneça seu feedback: ");
-    scanf("%*c"); // Consumindo a nova linha deixada pelo scanf anterior
-    fgets(feedback, sizeof(feedback), stdin);
-    // Aqui você pode adicionar a lógica para processar e registrar o feedback do usuário
-    printf("Feedback registrado com sucesso!\n");
-}
+# Função para criar uma nova pasta
+def criar_pasta():
+    nome_pasta = input("Digite o nome da nova pasta: ")
+    caminho_pasta = criar_nova_pasta(nome_pasta)
+    print("Nova pasta criada:", caminho_pasta)
 
-int main() {
-    printf("Bem-vindo ao sistema de gerenciamento de arquivos da IA!\n");
-    printf("Por favor, escolha uma das opções abaixo:\n");
-    printf("Opções:\n");
-    printf("- criar_pasta: Criar uma nova pasta\n");
-    printf("- listar: Listar arquivos e pastas\n");
-    printf("- mover: Mover um arquivo ou pasta\n");
-    printf("- deletar: Deletar um arquivo ou pasta\n");
-    printf("- limpar: Limpar uma pasta (deletar todos os arquivos e pastas dentro dela)\n");
-    printf("- buscar_aprendizado: Buscar ativamente aprendizado pela internet\n");
-    printf("- pesquisar_avaliar_api: Pesquisar e avaliar APIs relevantes\n");
+# Função para listar arquivos e pastas
+def listar_arquivos_pastas():
+    pasta = input("Digite o nome da pasta que deseja listar (deixe em branco para listar tudo): ")
+    conteudo_pasta = listar_arquivos_e_pastas(pasta)
+    print("Conteúdo da pasta:")
+    for item in conteudo_pasta:
+        print("-", item)
 
-    while (1) {
-        char comando[50];
-        printf("\nDigite o comando desejado ou 'sair' para encerrar: ");
-        scanf("%s", comando);
-        if (strcmp(comando, "sair") == 0) {
-            printf("Até logo!\n");
-            break;
-        } else if (strcmp(comando, "criar_pasta") == 0) {
-            criar_nova_pasta(NULL);
-        } else if (strcmp(comando, "listar") == 0) {
-            listar_arquivos_e_pastas(NULL);
-        } else if (strcmp(comando, "mover") == 0) {
-            mover_arquivo_ou_pasta(NULL, NULL);
-        } else if (strcmp(comando, "deletar") == 0) {
-            deletar_arquivo_ou_pasta(NULL);
-        } else if (strcmp(comando, "limpar") == 0) {
-            limpar_pasta(NULL);
-        } else if (strcmp(comando, "buscar_aprendizado") == 0) {
-            buscar_aprendizado();
-        } else if (strcmp(comando, "pesquisar_avaliar_api") == 0) {
-            pesquisar_avaliar_api();
-        } else {
-            printf("Comando inválido.\n");
-        }
-    }
+# Função para mover um arquivo ou pasta
+def mover_arquivo_pasta():
+    origem = input("Digite o nome do arquivo ou pasta que deseja mover: ")
+    destino = input("Digite o novo nome ou caminho de destino: ")
+    mover_arquivo_ou_pasta(origem, destino)
+    print("Arquivo ou pasta movido com sucesso!")
 
-    // Salvar o estado da IA
-    salvar_estado();
+# Função para deletar um arquivo ou pasta
+def deletar_arquivo_pasta():
+    arquivo_pasta = input("Digite o nome do arquivo ou pasta que deseja deletar: ")
+    deletar_arquivo_ou_pasta(arquivo_pasta)
+    print("Arquivo ou pasta deletado com sucesso!")
 
-    return 0;
-}
+# Função para limpar uma pasta (deletar todos os arquivos e pastas dentro dela)
+def limpar_pasta():
+    pasta = input("Digite o nome da pasta que deseja limpar: ")
+    limpar_pasta(pasta)
+    print("Pasta limpa com sucesso!")
+
+# Função para enviar notificação
+def enviar_notificacao(mensagem):
+    # Aqui você pode implementar a lógica para enviar uma notificação para você (por email, mensagem de texto, etc.)
+    print("Notificação enviada:", mensagem)
+
+# Função para pesquisar e avaliar APIs
+def pesquisar_avaliar_api(palavra_chave):
+    # Aqui você pode implementar lógica para pesquisar e avaliar APIs relevantes
+    # Retorne informações sobre as APIs encontradas
+    pass
+
+# Função para solicitar permissão do usuário e integrar uma nova API
+def integrar_nova_api(api_info):
+    permissao = input(f"Deseja integrar a API {api_info['nome']}? (s/n): ")
+    if permissao.lower() == 's':
+        # Aqui você pode adicionar a lógica para integrar a API ao seu sistema
+        print(f"API {api_info['nome']} integrada com sucesso!")
+        return True
+    else:
+        print("Integração da API cancelada pelo usuário.")
+        return False
+
+# Função para coletar feedback do usuário
+def coletar_feedback():
+    feedback = input("Por favor, forneça seu feedback: ")
+    # Aqui você pode adicionar a lógica para processar e registrar o feedback do usuário
+    print("Feedback registrado com sucesso!")
+
+# Função para buscar ativamente aprendizado
+def buscar_aprendizado():
+    # Aqui você pode adicionar a lógica para buscar ativamente aprendizado
+    # Por exemplo, pesquisar na web, ler documentos, analisar dados, etc.
+    # Se a IA aprender algo novo, envie uma notificação
+    aprendeu_algo_novo = True  # Exemplo, substitua por sua lógica real
+    if aprendeu_algo_novo:
+        enviar_notificacao("A IA aprendeu algo novo!")
+
+# Função principal
+def main():
+    print("Bem-vindo ao sistema de gerenciamento de arquivos da IA!")
+    print("Por favor, escolha uma das opções abaixo:")
+    print("Opções:")
+    print("- criar_pasta: Criar uma nova pasta")
+    print("- listar: Listar arquivos e pastas")
+    print("- mover: Mover um arquivo ou pasta")
+    print("- deletar: Deletar um arquivo ou pasta")
+    print("- limpar: Limpar uma pasta (deletar todos os arquivos e pastas dentro dela)")
+    
+    while True:
+        comando = input("\nDigite o comando desejado ou 'sair' para encerrar: ")
+        if comando.lower() == 'sair':
+            print("Até logo!")
+            break
+        elif comando == 'criar_pasta':
+            criar_pasta()
+        elif comando == 'listar':
+            listar_arquivos_pastas()
+        elif comando == 'mover':
+            mover_arquivo_pasta()
+        elif comando == 'deletar':
+            deletar_arquivo_pasta()
+        elif comando == 'limpar':
+            limpar_pasta()
+        else:
+            print("Comando inválido.")
+
+# Carregar o estado da IA
+carregar_estado()
+
+# Iniciar busca de aprendizado
+buscar_aprendizado()
+
+# Executar o comando autoreconf
+os.system("autoreconf --force --install")
+
+# Inicialização do programa
+if __name__ == "__main__":
+    main()
+
+# Salvar o estado da IA
+salvar_estado()
